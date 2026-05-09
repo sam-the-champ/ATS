@@ -1,0 +1,67 @@
+
+// This is your database blueprint
+
+generator client {
+  provider      = "prisma-client-js"
+  // linux-preview is a catch-all for newer Linux environments like Codespaces
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  EMPLOYER
+  JOB_SEEKER
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password      String
+  role          Role     @default(JOB_SEEKER)
+  createdAt     DateTime @default(now())
+  
+  // Relations
+  jobs          Job[]         // Jobs posted (if Employer)
+  applications  Application[] // Applications submitted (if Job Seeker)
+  tokens        RefreshToken[]
+}
+
+model Job {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  location    String
+  salary      String?
+  employerId  String
+  employer    User     @relation(fields: [employerId], references: [id])
+  
+  applications Application[]
+  createdAt    DateTime @default(now())
+}
+
+model Application {
+  id          String   @id @default(uuid())
+  resumeUrl   String
+  aiScore     Float?   // Where our AI integration will store results
+  status      String   @default("PENDING") // PENDING, REVIEWED, ACCEPTED, REJECTED
+  
+  candidateId String
+  candidate   User     @relation(fields: [candidateId], references: [id])
+  
+  jobId       String
+  job         Job      @relation(fields: [jobId], references: [id])
+
+  createdAt   DateTime @default(now())
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+}
